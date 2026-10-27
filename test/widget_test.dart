@@ -18,9 +18,15 @@ void main() {
   testWidgets('Empty signup form shows validation errors', (tester) async {
     await tester.pumpWidget(const MyApp());
 
-    await tester.tap(find.text('Sign Up'));
-    await tester.pump();
+    // Scroll until the Sign Up button is visible.
+    await tester.ensureVisible(find.text('Sign Up'));
+    await tester.pumpAndSettle();
 
+    // Tap Sign Up with empty fields.
+    await tester.tap(find.text('Sign Up'));
+    await tester.pumpAndSettle();
+
+    // Confirm validation errors appear.
     expect(find.text('Please enter your name'), findsOneWidget);
     expect(find.text('Please enter your email'), findsOneWidget);
     expect(find.text('Please enter a password'), findsOneWidget);
