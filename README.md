@@ -1,120 +1,77 @@
-# Campus Circle
+# The Haunted Creature Registry
 
-**MAD 4360 – Mobile App Development**  
-**In-Class Activity 10: Flutter Signup Form Quest**  
-**Track:** Graduate  
-**Tasks:** Task A (Local Signup Tip Simulation) and Task C (Confirm & Celebrate)  
-**Student:** Harshit Jain
+MAD 4360 Mobile App Development · In-Class Activity 11 · Graduate Track
 
-## About the App
+Selected extension: **Task C — The Guarded Crypt**
 
-Campus Circle is a Flutter signup demo for a student community. The form asks for a full name, email address, password, and password confirmation. It checks the inputs before showing a welcome message with the user's name. This is a demo, so it doesn't create an actual account.
+A Halloween-themed Flutter registration demo extending the Activity 10 Campus Circle app. Register a creature through three connected screens, with dark purple backgrounds, orange accents, a typewriter welcome, and celebratory confetti. Registration is simulated locally; no account is created.
 
-I also added a Local Signup Coach. It gives short password tips from a list saved in the app, without contacting a server or using a live AI model.
+## Structure
 
-## Features
+```text
+lib/
+├── main.dart                  # App, global theme, initial screen
+└── screens/
+    ├── welcome_screen.dart    # Typewriter introduction and entry button
+    ├── signup_screen.dart     # Form, date picker, local coach, submission guards
+    └── success_screen.dart    # Personalized confirmation and confetti
+```
 
-- A signup form with four fields and clear validation messages.
-- Email format checking and a minimum password length of six characters.
-- A confirm-password field that blocks signup if the passwords don't match.
-- A show/hide password button and a welcome message using the entered name.
-- A purple Material Design theme and a scrollable layout.
-- Preset password tips with loading, success, error, and retry states.
-- Buttons to demonstrate a local error and missing-tip situation.
+`pubspec.yaml` and `pubspec.lock` include `animated_text_kit` and `confetti`. No `shared_preferences` or Task B persistence is used.
 
-## How It Works
+## Features and navigation
 
-### Signup Form
+- Welcome → Signup uses `Navigator.push()`. Android Back from signup returns to the welcome foyer.
+- Signup preserves the Activity 10 name, email, password, confirmation validators, and password visibility toggle. Passwords require at least six characters.
+- A required creature dropdown offers Ghost, Bat, Black Cat, Pumpkin Spirit, and Witch.
+- A required read-only Birth Date field opens `showDatePicker()`, with today as the latest permitted date.
+- Valid registration disables the button and shows a progress indicator during a two-second simulated delay. The trimmed name and selected creature are passed through required constructor arguments.
+- Signup → Success uses `Navigator.pushReplacement()`, removing the completed form. Success displays the name and creature and starts confetti once.
+- Success intercepts system Back with `PopScope`. Both Back and **Back to the Foyer** open a fresh welcome route and clear the previous stack.
+- The Local Signup Coach retains preset tips, loading, demo error/missing-data states, and retry. It does not read registration inputs or participate in validation.
+- Scrollable, width-constrained layouts keep forms usable in smaller windows and with the keyboard open.
 
-The signup screen is a `StatefulWidget` because the visible content changes as the user interacts with it. I use a `Form` with a `GlobalKey<FormState>` to run the field validators when **Sign Up** is pressed. Invalid input shows a message under the relevant field. If every field is valid and both passwords match, a green SnackBar welcomes the user by name.
+## Local state and Task C lifecycle protection
 
-The text controllers are disposed of when the page is removed. No account details are sent to a backend or stored by the app.
+Signup keeps its controllers, nullable creature selection, selected date, and loading flags in widget state. All five text controllers are disposed. The coach has independent state and checks `mounted` after its delay.
 
-### Task A: Local Signup Tip Simulation
+Registration validates before setting a synchronous `_submissionStarted` guard. That guard remains set through navigation, so invoking a saved callback twice cannot start a second operation even before the disabled button rebuilds. Name and creature are captured before the delay. Afterward, the handler checks both `mounted` and whether the signup route is still current before navigating. The route check also handles a Back transition while the outgoing screen is still mounted. The delayed future can finish harmlessly after departure; it does not update state or navigate.
 
-The fixed category is `password_help`. The app has three short tips stored locally and displays them in a repeatable order. Selecting **Get a signup tip** briefly shows a loading indicator before displaying a tip as plain text. The result is labeled **“Preset demo tip—not live AI”** and stays under 240 characters.
+Success rejects empty or whitespace-only names or creature types without rendering registration information. A single post-frame callback redirects to a fresh welcome screen, avoiding navigation during build and redirect loops. Its `ConfettiController` starts once after the first frame and is disposed when the screen leaves.
 
-The **Test local error** and **Test missing tips** buttons demonstrate the failure states. The missing-tip button simulates unavailable data; it does not delete the stored tips. In both cases, the app shows an error and a **Retry** button. Retrying starts another lookup and can show a valid tip again.
+## Run and verify
 
-The tip feature only uses its fixed category and stored tips. It does not read the name, email, password, or password confirmation, and it never decides whether the signup form is valid.
-
-### Task C: Confirm & Celebrate
-
-I added a **Confirm Password** field. If the two passwords are different, the form displays **“Passwords do not match”** and prevents successful submission. When the fields pass validation, the green SnackBar displays a message such as **“Welcome, Harry! Demo signup completed successfully.”**
-
-## Testing
-
-I tested the form and the Local Signup Coach, including the error and recovery paths.
-
-| Test | Result |
-| --- | --- |
-| Submit with empty fields | Required-field messages appeared. Passed. |
-| Enter an invalid email | Email validation message appeared. Passed. |
-| Enter a password shorter than six characters | Password-length message appeared. Passed. |
-| Enter different passwords | Mismatch message appeared and signup was blocked. Passed. |
-| Enter valid details with matching passwords | Personalized green welcome message appeared. Passed. |
-| Request a signup tip | A labeled preset tip appeared. Passed. |
-| Observe loading before the tip | Loading state displayed. Passed. |
-| Simulate a local error | Error message and Retry button appeared. Passed. |
-| Simulate missing tips | Missing-tip message and Retry button appeared. Passed. |
-| Retry after an error | Error cleared and a preset tip appeared. Passed. |
-| Request a tip offline | The local tip feature continued working. Passed. |
-| Run Flutter widget tests | Tests completed successfully. Passed. |
-
-I also ran `flutter analyze`, which reported no issues. Screenshots captured during testing show the validation messages, welcome SnackBar, preset tips, and error states.
-
-## Graduate Reflection
-
-### 1. Identify one privacy boundary in the local tip feature. What information does it keep out of the feature, and why?
-
-The signup tip feature uses only the fixed `password_help` category and the tips saved in the app. It does not read the name, email, password, or confirmation fields. This matters because the tips are general advice and don't need anyone's personal information. Keeping the two parts separate also makes the app easier to understand and test.
-
-### 2. What should the UI do when local tip data is empty or missing? Explain your error and retry behavior.
-
-If the tip data is missing, the app shows an error message instead of an empty result. A Retry button is displayed so the user can try again. I added a **Test missing tips** button to reproduce this case without removing the actual tips. After Retry, the app makes a normal local lookup and displays a preset tip.
-
-### 3. Why should preset tips be clearly labeled and kept separate from form validation?
-
-The tips are fixed messages, not responses from a live AI model. The label makes that clear to anyone using the app. Form validation is handled separately by the name, email, and password validators. A tip can help someone choose a password, but it should not decide whether their signup is accepted.
-
-### Trade-off and Improvement
-
-Using preset tips keeps the feature simple and usable without internet access. The downside is that it can only show a small number of general tips. I would improve it by adding more useful categories and writing more widget tests for the different tip states. I would still keep the tip feature separate from personal form data.
-
-### My Contribution
-
-I worked on this activity individually. I built and customized the signup screen, added form validation and password confirmation, and implemented the local tip feature with loading, error, and retry behavior. I tested the valid and invalid form cases, checked the tip recovery flow, ran Flutter checks, pushed the project to GitHub, and generated the Android release APK.
-
-## Run the Project
-
-Make sure Flutter is installed and a supported device or emulator is available. In the project directory, run:
+With Flutter installed and a supported device available:
 
 ```bash
 flutter pub get
 flutter run
 ```
 
-To check the project:
-
 ```bash
+dart format lib test
 flutter analyze
 flutter test
-```
-
-## Android APK
-
-I generated the release APK with:
-
-```bash
 flutter build apk --release
 ```
 
-The generated file is located at:
+Actual automated results on October 30, 2026, using Flutter 3.47.2 / Dart 3.13.2:
 
-```text
-build/app/outputs/flutter-apk/app-release.apk
-```
+| Check | Result |
+| --- | --- |
+| `dart format lib test` | Completed successfully |
+| `flutter analyze` | No issues found |
+| `flutter test` | All 16 widget tests passed |
+| `flutter build apk --release` | Succeeded; reported 49.7 MB APK |
 
-## Limitations
+APK: `build/app/outputs/flutter-apk/app-release.apk`.
 
-Campus Circle is a classroom demo, not a full registration system. It does not create accounts or save credentials. The email validator checks the format, not whether the address exists. The Local Signup Coach provides preset advice rather than personalized or live AI responses.
+Tests cover welcome/entry/Back navigation; all required fields; invalid email, short password, and mismatched confirmation; password visibility; a valid registration and its two-second loading state; duplicate callback protection; personalized success; both foyer return paths; four invalid success-data cases; leaving during loading and during the exit transition; compact layout with keyboard insets; and coach error/retry recovery. Success tests advance controlled frames instead of waiting for confetti to settle.
+
+## Manual checks and limitations
+
+Install the APK on an Android device or emulator and check physical/gesture Back behavior, keyboard scrolling, date selection/cancellation and future-date restriction, typewriter appearance, confetti, large text, landscape layout, and the coach's missing-tip/retry flow. Capture your own screenshots and observations for the Ghost Hunt Word document. No manual device testing or screenshots are claimed here.
+
+This is a classroom demo with no backend, authentication, saved registrations, or age restriction. Email validation checks format only. Tips are fixed local messages, not live AI. The original Android signing configuration still uses the debug key for release builds; this APK is suitable for classroom testing, not a store release. Flutter Doctor reported unknown Android license status and duplicate adb installations, but the release build completed successfully. No Android device was connected during verification.
+
+Work remains on `activity-11`; the Activity 10 implementation and README are preserved in Git history (pre-change commit `793c128`). Nothing was force-pushed or pushed automatically.
